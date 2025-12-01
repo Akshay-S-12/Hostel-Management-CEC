@@ -1,0 +1,166 @@
+{% extends 'layout.html' %}
+
+{% block title %}Admin - Fee Settings{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Fee Settings Administration</h2>
+            <hr>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Hostel Fee Settings</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin_fee_settings') }}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="hostel_fee" class="form-label">Hostel Fee Amount (₹)</label>
+                                <input type="number" class="form-control" id="hostel_fee" name="hostel_fee" 
+                                       value="{{ hostel_fee.amount }}" step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="hostel_fee_description" class="form-label">Description</label>
+                                <input type="text" class="form-control" id="hostel_fee_description" 
+                                       name="hostel_fee_description" value="{{ hostel_fee.description }}">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Hostel Fee</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Fee Reduction Types</h4>
+                    <button class="btn btn-light" type="button" data-bs-toggle="modal" data-bs-target="#addReductionModal">
+                        <i class="fas fa-plus"></i> Add New
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if fee_reductions %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Amount (₹)</th>
+                                        <th>Description</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reduction in fee_reductions %}
+                                        <tr>
+                                            <td>{{ reduction.reduction_type }}</td>
+                                            <td>₹{{ reduction.amount }}</td>
+                                            <td>{{ reduction.description }}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-primary edit-reduction" 
+                                                        data-id="{{ reduction.id }}"
+                                                        data-type="{{ reduction.reduction_type }}"
+                                                        data-amount="{{ reduction.amount }}"
+                                                        data-description="{{ reduction.description }}">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                                <form method="POST" action="{{ url_for('admin_fee_settings') }}" class="d-inline">
+                                                    <input type="hidden" name="delete_reduction" value="{{ reduction.id }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                                            onclick="return confirm('Are you sure you want to delete this reduction type?');">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No fee reduction types defined yet. Click "Add New" to create one.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Reduction Modal -->
+<div class="modal fade" id="addReductionModal" tabindex="-1" aria-labelledby="addReductionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addReductionModalLabel">Add Fee Reduction Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_fee_settings') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="reduction_id" name="reduction_id" value="new">
+                    <div class="mb-3">
+                        <label for="reduction_type" class="form-label">Reduction Type</label>
+                        <input type="text" class="form-control" id="reduction_type" name="reduction_type" required>
+                        <div class="form-text">E.g., Scholarship, Financial Aid, Merit-based</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reduction_amount" class="form-label">Amount (₹)</label>
+                        <input type="number" class="form-control" id="reduction_amount" name="reduction_amount" 
+                               step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reduction_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="reduction_description" name="reduction_description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Setup edit buttons
+        const editButtons = document.querySelectorAll('.edit-reduction');
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                const type = this.getAttribute('data-type');
+                const amount = this.getAttribute('data-amount');
+                const description = this.getAttribute('data-description');
+                
+                // Set modal values
+                document.getElementById('addReductionModalLabel').textContent = 'Edit Fee Reduction Type';
+                document.getElementById('reduction_id').value = id;
+                document.getElementById('reduction_type').value = type;
+                document.getElementById('reduction_amount').value = amount;
+                document.getElementById('reduction_description').value = description;
+                
+                // Show modal
+                const modal = new bootstrap.Modal(document.getElementById('addReductionModal'));
+                modal.show();
+            });
+        });
+    });
+</script>
+{% endblock %}
